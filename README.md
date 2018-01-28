@@ -12,6 +12,8 @@ Programmers in concurrent languages such as Erlang/Elixir say that one of the ha
 
 With all this sweet superpowers, that comes with the Rholang compiler and type checker, it will be a pleasure to write smart contracts. :lollipop:
 
+![Rho sample](./assets/rho-vscode-sample.png)
+
 ## TODO
 
 - add commands, shippets, completion, hovers...
