@@ -1,0 +1,47 @@
+{
+  "name": "rholang",
+  "displayName": "Rholang",
+  "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
+  "version": "0.0.1",
+  "preview": true,
+  "publisher": "tgrospic",
+  "author": "Tomislav Grospic",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "categories": [
+    "Languages"
+  ],
+  "icon": "./assets/rchain.png",
+  "contributes": {
+    "languages": [
+      {
+        "id": "rho",
+        "aliases": [
+          "Rholang",
+          "rho"
+        ],
+        "extensions": [
+          "rho"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rho",
+        "scopeName": "source.rho",
+        "path": "./syntaxes/rho.tmLanguage.json"
+      }
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/tgrospic/rholang-vscode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tgrospic/rholang-vscode.git"
+  },
+  "homepage": "https://github.com/tgrospic/rholang-vscode/blob/master/README.md"
+}

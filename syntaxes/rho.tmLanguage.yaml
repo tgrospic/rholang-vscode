@@ -1,0 +1,265 @@
+# [PackageDev] target_format: plist, ext: tmLanguage
+---
+$schema: 'https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json'
+
+name: Rholang
+scopeName: source.rho
+uuid: 36a6a366-07fb-4659-ba3d-86cfc03c2f1e
+fileTypes: [rho]
+
+patterns:
+  - include: '#declarations'
+
+repository:
+
+  declarations:
+    patterns:
+      - include: '#comment'
+      - include: '#string'
+      - include: '#new-declaration'
+      - include: '#contract-declaration'
+      - include: '#func-declaration'
+      - include: '#for-declaration'
+      - include: '#match-declaration'
+      - include: '#select-declaration'
+      - include: '#sum-total-declaration'
+      - include: '#block-declaration'
+      - include: '#appl'
+      - include: '#constant'
+      - include: '#chan'
+
+  terminals:
+    patterns:
+      - include: '#comment'
+      - include: '#string'
+      - include: '#appl'
+      - include: '#constant'
+      - include: '#chan'
+
+  block-declaration:
+    begin: \{
+    beginCaptures: {'0': {name: punctuation.curlybrace.open.rho}}
+    end: \}
+    endCaptures: {'0': {name: punctuation.curlybrace.close.rho}}
+    patterns:
+      - include: '#declarations'
+
+  contract-declaration:
+    begin: '(?=\bcontract\b)'
+    end: '(?<=\})'
+    patterns:
+      - match: '\bcontract\b'
+        name: keyword.other.contract.rho
+      - begin: "([-_''[:alnum:]]+)"
+        beginCaptures:
+          '1': {name: entity.name.function.rho}
+        end: '(?=\{)'
+        patterns:
+          - include: '#comment'
+          - include: '#parameter-list'
+          - begin: '(?<=\))'
+            end: '(?=\{)'
+            patterns:
+              - match: \=
+                name: keyword.other.contract.rho
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  func-declaration:
+    begin: '(?=\bdef\b)'
+    end: '(?<=\})'
+    patterns:
+      - match: '\bdef\b'
+        name: keyword.other.function.rho
+      - begin: "([-_''[:alnum:]]+)"
+        beginCaptures:
+          '1': {name: entity.name.function.rho}
+        end: '(?=\{)'
+        patterns:
+          - include: '#comment'
+          - include: '#parameter-list'
+          - begin: '(?<=\))'
+            end: '(?=\{)'
+            patterns:
+              - match: \=
+                name: keyword.other.function.rho
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  new-declaration:
+    patterns:
+      - begin: '\bnew\b'
+        beginCaptures: {'0': {name: keyword.other.new.rho}}
+        end: '(in)\s*(?=\{)'
+        endCaptures: {'1': {name: keyword.other.in.rho}}
+        patterns:
+          - include: '#comment'
+          - include: '#parameter'
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  match-declaration:
+    begin: '(?=\bmatch\b)'
+    end: '(?=\})'
+    patterns:
+      - begin: '\bmatch\b'
+        beginCaptures: {'0': {name: keyword.control.match.rho}}
+        end: '\bwith\b'
+        endCaptures: {'0': {name: keyword.control.match.rho}}
+        patterns:
+          - include: '#terminals'
+      - include: '#comment'
+      - include: '#block-declaration'
+      - include: '#terminals'
+      - match: '=>'
+        name: keyword.control.match.rho
+
+  select-declaration:
+    begin: '(?=\bselect\b)'
+    end: '(?<=\})'
+    patterns:
+      - begin: '\bselect\b'
+        beginCaptures: {'0': {name: keyword.control.select.rho}}
+        end: '(?=\})'
+        patterns:
+          - include: '#comment'
+          - include: '#case-declaration'
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  case-declaration:
+    begin: '(?=\bcase\b)'
+    end: '(?<=\})'
+    patterns:
+      - begin: '\bcase\b'
+        beginCaptures: {'0': {name: keyword.control.case.rho}}
+        end: '(?=\{)'
+        patterns:
+          - include: '#parameter-bind'
+          - include: '#terminals'
+          - match: '=>'
+            name: keyword.control.case.rho
+          - match: '<-'
+            name: keyword.other.case.rho
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  for-declaration:
+    begin: '(?=\bfor\b)'
+    end: '(?<=\})'
+    patterns:
+      - begin: '\bfor\b'
+        beginCaptures: {'0': {name: keyword.control.for.rho}}
+        end: '(?<=\))'
+        patterns:
+          - include: '#comment'
+          - include: '#bind'
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  sum-total-declaration:
+    begin: '(?=\b(sum|total)\b)'
+    end: '(?<=\})'
+    patterns:
+      - begin: '\b(sum|total)\b'
+        beginCaptures: {'0': {name: keyword.control.sum.rho}}
+        end: '(?<=\))'
+        patterns:
+          - include: '#comment'
+          - include: '#bind'
+      - include: '#comment'
+      - include: '#block-declaration'
+
+  bind:
+    begin: \(
+    beginCaptures: {'0': {name: punctuation.parenthesis.open.rho}}
+    end: \)
+    endCaptures: {'0': {name: punctuation.parenthesis.close.rho}}
+    patterns:
+      - include: '#parameter-bind'
+      - include: '#terminals'
+      - match: '<-|/:|:\\'
+        name: keyword.other.bind.rho
+
+  parameter-list:
+    begin: \(
+    beginCaptures: {'0': {name: punctuation.parenthesis.open.rho}}
+    end: \)
+    endCaptures: {'0': {name: punctuation.parenthesis.close.rho}}
+    patterns:
+      - include: '#comment'
+      - include: '#string'
+      - include: '#constant'
+      - include: '#parameter'
+
+  argument-list:
+    begin: \(
+    beginCaptures: {'0': {name: punctuation.parenthesis.open.rho}}
+    end: \)
+    endCaptures: {'0': {name: punctuation.parenthesis.close.rho}}
+    patterns:
+      - include: '#terminals'
+
+  parameter:
+    match: '[-_''[:alnum:]]+'
+    captures:
+      '0': {name: variable.name.rho}
+
+  parameter-bind:
+    match: '[-_''[:alnum:]]+\s*(?=<-)'
+    captures:
+      '0': {name: variable.name.rho}
+
+  appl:
+    begin: '(?=\b\.?[-_''[:alnum:]]+\s*\()'
+    end: '(?<=\))'
+    patterns:
+      - include: '#argument-list'
+      - match: '[-_''[:alnum:]]+'
+        captures:
+          '0': {name: entity.name.function.rho}
+
+  chan:
+    match: '([@*#]*)([-_''[:alnum:]]+)'
+    captures:
+      '1': {name: keyword.other.chan.rho}
+
+  constant:
+    patterns:
+      - match: '\b(Nil|true|false)\b'
+        name: constant.language.rho
+      - match: '-?\b[0-9]+\b'
+        name: constant.numeric.rho
+
+  string:
+    begin: '"'
+    end: '"'
+    name: string.quoted.double.rho
+    patterns:
+      - match: \\.
+        name: constant.character.escape.rho
+
+  comment:
+    patterns:
+      - name: comment.block.rho
+        begin: '/\*'
+        beginCaptures:
+          '0': {name: punctuation.definition.comment.rho}
+        end: '\*/'
+        endCaptures:
+          '0': {name: punctuation.definition.comment.rho}
+      - begin: '(^\s+)?(?=//)'
+        beginCaptures:
+          '1': {name: punctuation.whitespace.comment.leading.rho}
+        end: '(?=$)'
+        patterns:
+          - name: comment.block.documentation.rho
+            begin: '(?<!/)///(?!/)'
+            beginCaptures:
+              '0': {name: punctuation.definition.comment.rho}
+            end: '(?=$)'
+          - name: comment.line.double-slash.rho
+            begin: '(?<!/)//(?!/)'
+            beginCaptures:
+              '0': {name: punctuation.definition.comment.rho}
+            end: '(?=$)'
