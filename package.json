@@ -11,7 +11,7 @@
     "vscode": "^1.0.0"
   },
   "categories": [
-    "Languages"
+    "Programming Languages"
   ],
   "icon": "assets/rchain.png",
   "contributes": {
@@ -43,10 +43,5 @@
     "type": "git",
     "url": "https://github.com/tgrospic/rholang-vscode.git"
   },
-  "homepage": "https://github.com/tgrospic/rholang-vscode/blob/master/README.md",
-  "__metadata": {
-    "id": "48bfc6de-9d41-4714-82a5-3eea00a5b5e3",
-    "publisherDisplayName": "Tomislav Grospić",
-    "publisherId": "e25f098f-43df-4331-a6e7-2172f48642e9"
-  }
+  "homepage": "https://github.com/tgrospic/rholang-vscode/blob/master/README.md"
 }
