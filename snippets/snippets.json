@@ -1,0 +1,36 @@
+{
+	"Create a new name": {
+		"prefix": "new",
+		"body": [
+			"new $1 in {",
+			"  $2",
+			"}",
+		],
+		"description": "Create a new name"
+  },
+  "Receive process": {
+		"prefix": "for",
+		"body": [
+			"for( $1 <- $2 ) {",
+			"  $3",
+			"}",
+		],
+		"description": "Create a new receive process"
+  },
+  "Send process": {
+		"prefix": "sen",
+		"body": [
+			"$1!($1)",
+		],
+		"description": "Create a new send process"
+  },
+  "Contract": {
+		"prefix": "con",
+		"body": [
+			"contract $1($1) = {",
+			"  $2",
+			"}",
+		],
+		"description": "Create a new contract (receive process)"
+	},
+}

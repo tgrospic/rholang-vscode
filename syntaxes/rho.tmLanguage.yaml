@@ -56,8 +56,8 @@ repository:
     patterns:
       - begin: '\bnew\b'
         beginCaptures: {'0': {name: constant.language.new.rho}}
-        end: '(in)\s*(?=\{)'
-        endCaptures: {'1': {name: constant.language.in.rho}}
+        end: '\bin\b'
+        endCaptures: {'0': {name: constant.language.in.rho}}
         patterns:
           - include: '#comment'
           - include: '#string'

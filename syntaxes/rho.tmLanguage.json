@@ -50,7 +50,7 @@
           "begin": "\\bcontract\\b",
           "beginCaptures": {
             "0": {
-              "name": "constant.language.contract.rho"
+              "name": "keyword.control.contract.rho"
             }
           },
           "end": "(?=\\{)",
@@ -109,9 +109,9 @@
               "name": "constant.language.new.rho"
             }
           },
-          "end": "(in)\\s*(?=\\{)",
+          "end": "\\bin\\b",
           "endCaptures": {
-            "1": {
+            "0": {
               "name": "constant.language.in.rho"
             }
           },
