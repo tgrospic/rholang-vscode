@@ -33,7 +33,7 @@ export class RholangServer {
   protected readonly pendingValidationRequests = new Map<string, number>()
   private _uri: string | undefined
   private _settings: {
-    disableLanguageServer: boolean
+    enableLanguageServer: boolean
     showAllOutput: boolean
   }
   isReady = false
@@ -82,16 +82,22 @@ export class RholangServer {
     })
 
     // Settings
+    let oldEnableLS = undefined
     this.connection.onDidChangeConfiguration((change) => {
       this.log('Settings: ' + JSON.stringify(change.settings, null, 2))
+
       this._settings = change.settings.rholang || {}
-      if (!this._settings.disableLanguageServer) {
-      log('Rholang Language Server (enabled)')
-      startRNodeProcess()
-      } else {
-        log('Rholang Language Server (disabled)')
-        stopRNodeProcess()
+      if(oldEnableLS !== this._settings.enableLanguageServer) {
+        // If settings is changed
+        if (this._settings.enableLanguageServer) {
+          log('Rholang Language Server (enabled)')
+          startRNodeProcess()
+        } else {
+          log('Rholang Language Server (disabled)')
+          stopRNodeProcess()
+        }
       }
+      oldEnableLS = this._settings.enableLanguageServer
     })
 
   }

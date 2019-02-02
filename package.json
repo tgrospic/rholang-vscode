@@ -2,7 +2,7 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
   "license": "SEE LICENSE IN LICENSE",
@@ -37,10 +37,10 @@
       "type": "object",
       "title": "Rholang",
       "properties": {
-        "rholang.disableLanguageServer": {
+        "rholang.enableLanguageServer": {
           "type": "boolean",
-          "default": false,
-          "description": "Disable loading of the Language Server and RNode when open a file."
+          "default": true,
+          "description": "Enable loading of the Language Server and RNode when open a file."
         },
         "rholang.showAllOutput": {
           "type": "boolean",

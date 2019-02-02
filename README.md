@@ -44,6 +44,6 @@ With all this sweet superpowers, that comes with the Rholang compiler and type c
 [arch-namespace-logic]: http://rchain-architecture.readthedocs.io/en/latest/contracts/namespaces.html#namespace-logic
 [tuplespaces-to-picalculus]: http://mobile-process-calculi-for-programming-the-new-blockchain.readthedocs.io/en/latest/actors-tuples-and-pi.html#from-tuplespaces-to-calculus
 
-[beta-badge]: https://cdn.rawgit.com/tgrospic/rholang-vscode/master/assets/beta-0.1.0.svg
+[beta-badge]: https://cdn.rawgit.com/tgrospic/rholang-vscode/master/assets/beta-0.1.1.svg
 [screenshot]: https://github.com/tgrospic/rholang-vscode/raw/master/assets/rho-vscode-sample.png
 [license]: https://github.com/tgrospic/rholang-vscode/blob/master/LICENSE
