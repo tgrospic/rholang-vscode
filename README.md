@@ -1,4 +1,6 @@
-# <img src="https://github.com/tgrospic/rholang-vscode/raw/master/assets/rchain.png" width="32px"></img> Rholang for VSCode
+# Rholang for VSCode
+
+<img src="https://github.com/tgrospic/rholang-vscode/raw/master/assets/rchain.png"/>
 
 <!-- ![beta][beta-badge] VSCode restriction for SVG in README -->
 
@@ -16,7 +18,7 @@ With all this sweet superpowers, that comes with the Rholang compiler and type c
 
 ## TODO
 
-- add commands, shippets, completion, hovers...
+- add commands, completion, hovers...
 - connect with the compiler (get semantic info)
 - ...
 
@@ -24,6 +26,11 @@ With all this sweet superpowers, that comes with the Rholang compiler and type c
 
 ### 0.0.1
 - Initial release. Syntax highlighting.
+
+### 0.1.0 (February 02, 2019)
+- Grammar update for Rholang Mercury release v0.8>.
+- **Rholang Language Server** with error highlighting.
+- Snippets for basic Rholang terms.
 
 ## License
 
@@ -37,6 +44,6 @@ With all this sweet superpowers, that comes with the Rholang compiler and type c
 [arch-namespace-logic]: http://rchain-architecture.readthedocs.io/en/latest/contracts/namespaces.html#namespace-logic
 [tuplespaces-to-picalculus]: http://mobile-process-calculi-for-programming-the-new-blockchain.readthedocs.io/en/latest/actors-tuples-and-pi.html#from-tuplespaces-to-calculus
 
-[beta-badge]: https://cdn.rawgit.com/tgrospic/rholang-vscode/master/assets/beta-0.0.1.svg
+[beta-badge]: https://cdn.rawgit.com/tgrospic/rholang-vscode/master/assets/beta-0.1.0.svg
 [screenshot]: https://github.com/tgrospic/rholang-vscode/raw/master/assets/rho-vscode-sample.png
 [license]: https://github.com/tgrospic/rholang-vscode/blob/master/LICENSE
