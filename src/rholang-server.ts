@@ -50,30 +50,30 @@ export class RholangServer {
 
       // Start RNode (standalone) process used by the server
       const rhovm = this.startRNode()
+      this.log(`Process PID: ${rhovm.pid}`)
 
       // Try to stop RNode on server exit
       // docker stop (docker ps -a | grep rholang-vscode | awk 'match($0, /^([[:digit:]a-f]+).+rholang-vscode-[[:digit:]a-f]+/, xs) { print xs[1] }')
       process.on('exit', () => {
         stopRNodeProcess()
       })
-
-      this.connection.onInitialize(params => {
-        if (params.rootPath) {
-          this.workspaceRoot = Uri.file(params.rootPath)
-        } else if (params.rootUri) {
-          this.workspaceRoot = Uri.parse(params.rootUri)
-        }
-        this.log(`Process PID: ${rhovm.pid}`)
-        return {
-          capabilities: {
-            textDocumentSync: this.documents.syncKind,
-            hoverProvider: false,
-            documentSymbolProvider: false,
-            documentRangeFormattingProvider: false,
-          }
-        }
-      })
     }
+
+    this.connection.onInitialize(params => {
+      if (params.rootPath) {
+        this.workspaceRoot = Uri.file(params.rootPath)
+      } else if (params.rootUri) {
+        this.workspaceRoot = Uri.parse(params.rootUri)
+      }
+      return {
+        capabilities: {
+          textDocumentSync: this.documents.syncKind,
+          hoverProvider: false,
+          documentSymbolProvider: false,
+          documentRangeFormattingProvider: false,
+        }
+      }
+    })
 
     // Evaluate the code on save document
     this.connection.onDidSaveTextDocument(params => {
