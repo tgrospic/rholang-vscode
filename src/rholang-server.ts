@@ -224,6 +224,8 @@ export class RholangServer {
       // Ensure it's string
       const result = `${data}`
 
+      if (result.trim() === '') return
+
       // Evaluating term
       const evalTermRegex = /[\s\S]+(Evaluating:[\n ]+.+)/g
       const evalTerm = regexec(evalTermRegex, result)
@@ -245,38 +247,70 @@ export class RholangServer {
 
       // Compile errors
 
-      // Error: coop.rchain.rholang.interpreter.errors$TopLevelFreeVariablesNotAllowedError: Top level free variables are not allowed: tdout at 18:5.
-      const compileErrorRegex = /Error: [\s\S]+ (\d+):(\d+)\./g
-      const compileError = regexec(compileErrorRegex, result)
-      if (compileError) {
-        const [message, ...ranges] = compileError
-        const [sl, sc] = ranges.map(x => parseInt(x) - 1)
-        const range = {
-          start: { line: sl, character: sc },
-          end: { line: sl, character: sc },
+      const errorParsers = [{
+        // Free names
+        // Error: coop.rchain.rholang.interpreter.errors$TopLevelFreeVariablesNotAllowedError: Top level free variables are not allowed: x at 18:5.
+        regex: /Error:[\s\S]+ (\d+):(\d+)\./g,
+        diag: ([message, ...ranges]) => {
+          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+          const range = {
+            start: { line: sl, character: sc },
+            end: { line: sl, character: sc },
+          }
+          return [{ range, message }]
         }
-        this.sendErrors(uri, {range, message})
-        this.log('')
-        this.log(message)
+      }, {
+        // Name/Process type error
+        // Error: coop.rchain.rholang.interpreter.errors$UnexpectedProcContext: Name variable: x at 17:5 used in process context at 17:17
+        // Error: coop.rchain.rholang.interpreter.errors$UnexpectedNameContext: Proc variable: x at 19:6 used in Name context at 19:19
+        regex: /Error:[\s\S]+ (\d+):(\d+) used in \w+ context at (\d+):(\d+)/g,
+        diag: ([message, ...ranges]) => {
+          const [sl1, sc1, sl2, sc2] = ranges.map(x => parseInt(x) - 1)
+          // Make range with the same start/end
+          const r = (line, character, msg) => ({ range: { start: { line, character }, end: { line, character }, }, message: msg })
+          return [r(sl1, sc1, message), r(sl2, sc2, message)]
+        }
+      }, {
+        // Error with line identification
+        // Error: coop.rchain.rholang.interpreter.errors$LexerError: Illegal Character <?> at 4:4(9)
+        regex: /Error:[\s\S]+ (\d+):(\d+)[\s\S]+/g,
+        diag: ([message, ...ranges]) => {
+          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+          const range = {
+            start: { line: sl, character: sc },
+            end: { line: sl, character: sc },
+          }
+          return [{ range, message }]
+        }
+      }, {
+        // Any other error
+        regex: /Error:[\s\S]+/g,
+        diag: ([message, ...ranges]) => {
+          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+          const range = {
+            start: { line: 0, character: 0 },
+            end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
+          }
+          return [{ range, message }]
+        }
+      }]
+
+      const showError = str => ({regex, diag}) => {
+        const match = regexec(regex, str)
+        if (match) {
+          const errors = diag(match)
+          this.sendErrors(uri, ...errors)
+          this.log('')
+          this.log(errors[0].message)
+        }
+        return match
       }
 
-      // Error: coop.rchain.rholang.interpreter.errors$UnexpectedProcContext: Name variable: x at 17:5 used in process context at 17:17
-      // Error: coop.rchain.rholang.interpreter.errors$UnexpectedNameContext: Proc variable: x at 19:6 used in Name context at 19:19
-      const procNameErrorRegex = /Error: [\s\S]+ (\d+):(\d+) used in \w+ context at (\d+):(\d+)/g
-      const procNameError = regexec(procNameErrorRegex, result)
-      if (procNameError) {
-        const [message, ...ranges] = procNameError
-        const [sl1, sc1, sl2, sc2] = ranges.map(x => parseInt(x) - 1)
-        // Make range with the same start/end
-        const r = (line, character, msg) => ({ range: { start: { line, character }, end: { line, character }, }, message: msg })
-        const msgs = [r(sl1, sc1, message), r(sl2, sc2, message)]
-        this.sendErrors(uri, ...msgs)
-        this.log('')
-        this.log(message)
-      }
+      // Detect syntax error show by calling node
+      const syntaxError = regexec(/Error:[\s\S]+ Unrecognized interpreter error/g, result)
 
-      const knownMsg = evalTerm || cost || compileError || procNameError
-      if (this._settings.showAllOutput && !knownMsg && result.trim() != '') {
+      const shownMsg = evalTerm || cost || syntaxError || errorParsers.find(showError(result))
+      if (this._settings.showAllOutput && !shownMsg) {
         this.log('')
         this.log(`STDOUT:\n${result}`)
       }
