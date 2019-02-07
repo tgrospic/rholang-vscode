@@ -123,7 +123,7 @@ export class RholangServer {
 
   startRNode() {
     // Create working folder, as current user (Docker run as root)
-    if (!fs.existsSync(workingFolder)) fs.mkdirSync(workingFolder)
+    if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', rhoTmpName, workingFolder])
 
     // Start RNode (standalone) process used by the server
     const volume = `${workingFolder}:/vscode`
@@ -131,6 +131,8 @@ export class RholangServer {
 
     vm.stderr.on('data', data => {
       const result = `${data}`
+
+      if (result.trim() === '') return
 
       // Display error on last evaluated editor document
       // - until all errors will be returned to the caller
@@ -151,7 +153,7 @@ export class RholangServer {
       }
 
       const knownMsg = syntaxError
-      if (this._settings.showAllOutput && !knownMsg && result.trim() != '') {
+      if (this._settings.showAllOutput && !knownMsg) {
         this.log('')
         this.log(`STDERR:\n${result}`)
       }
@@ -164,6 +166,8 @@ export class RholangServer {
     // RNode stdout
     vm.stdout.on('data', data => {
       const result = `${data}`
+
+      if (result.trim() === '') return
 
       // Display output from callee rnode
       if (this._settings.showAllOutput) {
@@ -242,7 +246,9 @@ export class RholangServer {
         const [costMsg, n1, n2] = cost
         this.sendClear(uri)
         this.log('')
-        this.log(costMsg)
+        this._settings.showAllOutput
+          ? this.log(result)
+          : this.log(costMsg)
       }
 
       // Compile errors
