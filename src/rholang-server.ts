@@ -5,10 +5,11 @@ import { spawn } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
+import * as path from 'path'
 
-const rhoTmpPath = `${os.tmpdir()}/vscode-rholang`
+const rhoTmpPath = path.join(os.tmpdir(), 'vscode-rholang')
 const rhoTmpName = `rholang-vscode-${tmpFileName().substr(0, 16)}`
-const workingFolder = `${rhoTmpPath}/${rhoTmpName}`
+const workingFolder = path.join(rhoTmpPath, rhoTmpName)
 
 function tmpFileName() {
   const hash = crypto.createHash('sha256')
@@ -123,7 +124,7 @@ export class RholangServer {
 
   startRNode() {
     // Create working folder, as current user (Docker run as root)
-    if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', rhoTmpName, workingFolder])
+    if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', workingFolder])
 
     // Start RNode (standalone) process used by the server
     const volume = `${workingFolder}:/vscode`
