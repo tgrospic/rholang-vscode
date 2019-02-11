@@ -35,6 +35,7 @@ export class RholangServer {
   private _uri: string | undefined
   private _settings: {
     enableLanguageServer: boolean
+    dockerImage: string
     showAllOutput: boolean
   }
   isReady = false
@@ -128,7 +129,7 @@ export class RholangServer {
 
     // Start RNode (standalone) process used by the server
     const volume = `${workingFolder}:/vscode`
-    const vm = spawn('docker', ['run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, 'rchain/rnode:master', 'run', '-s', '-n'])
+    const vm = spawn('docker', ['run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, this._settings.dockerImage, 'run', '-s', '-n'])
 
     vm.stderr.on('data', data => {
       const result = `${data}`
