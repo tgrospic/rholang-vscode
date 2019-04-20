@@ -1,4 +1,4 @@
-import { createConnection, ProposedFeatures } from 'vscode-languageserver';
+import { createConnection, ProposedFeatures } from 'vscode-languageserver'
 import { RholangServer } from './rholang-server'
 
 const connection = createConnection(ProposedFeatures.all)

@@ -1,15 +1,16 @@
 import Uri from 'vscode-uri'
 import { IConnection, TextDocuments } from 'vscode-languageserver'
 import { DiagnosticSeverity } from "vscode-languageserver-types"
-import { spawn } from 'child_process'
+import { spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
 import * as path from 'path'
 
 const rhoTmpPath = path.join(os.tmpdir(), 'vscode-rholang')
-const rhoTmpName = `rholang-vscode-${tmpFileName().substr(0, 16)}`
+const rhoTmpName = `eval-${tmpFileName().substr(0, 16)}`
 const workingFolder = path.join(rhoTmpPath, rhoTmpName)
+const dataDir       = path.join(workingFolder, '.rnode')
 
 function tmpFileName() {
   const hash = crypto.createHash('sha256')
@@ -28,16 +29,20 @@ function regexec(regex, str) {
   return result[0]
 }
 
+type Settings = {
+  enableLanguageServer: boolean
+  rnode               : string
+  enableDocker        : boolean
+  rnodeDockerImage    : string
+  showAllOutput       : boolean
+}
+
 export class RholangServer {
   protected workspaceRoot: Uri | undefined
   protected readonly documents = new TextDocuments()
   protected readonly pendingValidationRequests = new Map<string, number>()
   private _uri: string | undefined
-  private _settings: {
-    enableLanguageServer: boolean
-    dockerImage: string
-    showAllOutput: boolean
-  }
+  private _settings: Settings
   isReady = false
 
   constructor(
@@ -46,19 +51,30 @@ export class RholangServer {
   ) {
     this.documents.listen(this.connection)
 
-    const stopRNodeProcess = () => spawn('docker', ['stop', rhoTmpName], { detached: true, stdio: 'ignore' })
+    let rhovm : ChildProcess
+
+    const stopRNodeProcess = useDocker => {
+      if (rhovm) {
+        try {
+          if (useDocker) spawn('docker', ['stop', rhoTmpName], { detached: true, stdio: 'ignore' })
+          else process.kill(rhovm.pid)
+        } catch {}
+        rhovm = null
+      }
+      this.isReady = false
+    }
+
     const startRNodeProcess = () => {
       log(`Temp folder: ${workingFolder}`)
 
       // Start RNode (standalone) process used by the server
-      const rhovm = this.startRNode()
-      this.log(`Process PID: ${rhovm.pid}`)
+      rhovm = this.startRNode()
+      if (rhovm) {
+        this.log(`Process PID: ${rhovm.pid}`)
 
-      // Try to stop RNode on server exit
-      // docker stop (docker ps -a | grep rholang-vscode | awk 'match($0, /^([[:digit:]a-f]+).+rholang-vscode-[[:digit:]a-f]+/, xs) { print xs[1] }')
-      process.on('exit', () => {
-        stopRNodeProcess()
-      })
+        // Try to stop RNode on server exit
+        process.on('exit', () => stopRNodeProcess(this.useDocker()))
+      }
     }
 
     this.connection.onInitialize(params => {
@@ -84,25 +100,38 @@ export class RholangServer {
     })
 
     // Settings
-    let oldEnableLS = undefined
+    let startDelayHandle : NodeJS.Timeout
     this.connection.onDidChangeConfiguration((change) => {
       this.log('Settings: ' + JSON.stringify(change.settings, null, 2))
 
-      this._settings = change.settings.rholang || {}
-      if(oldEnableLS !== this._settings.enableLanguageServer) {
-        // If settings is changed
-        if (this._settings.enableLanguageServer) {
-          log('Rholang Language Server (enabled)')
-          startRNodeProcess()
-        } else {
-          log('Rholang Language Server (disabled)')
-          stopRNodeProcess()
+      const oldSettings = this._settings
+      this._settings    = change.settings.rholang || {}
+      const diffs = (newS: Settings, oldS: Settings) => [
+        [true              , newS.enableLanguageServer, oldS.enableLanguageServer],
+        [true              , newS.enableDocker        , oldS.enableDocker],
+        [!newS.enableDocker, newS.rnode               , oldS.rnode]  ,
+        [newS.enableDocker , newS.rnodeDockerImage    , oldS.rnodeDockerImage],
+      ]
+      if(!oldSettings || diffs(this._settings, oldSettings).find(([s, x, y]) => s && x !== y)) {
+        // If settings change
+        oldSettings && stopRNodeProcess(oldSettings.enableDocker)
+        const startNode = () => {
+          if (this._settings.enableLanguageServer) {
+            log('Rholang Language Server (enabled)')
+            startRNodeProcess()
+          } else {
+            log('Rholang Language Server (disabled)')
+          }
         }
+        // Small delay for rnode to die
+        clearTimeout(startDelayHandle)
+        startDelayHandle = setTimeout(startNode, 1500)
       }
-      oldEnableLS = this._settings.enableLanguageServer
     })
 
   }
+
+  useDocker() { return this._settings.enableDocker }
 
   start() {
     this.connection.listen()
@@ -128,8 +157,21 @@ export class RholangServer {
     if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', workingFolder])
 
     // Start RNode (standalone) process used by the server
-    const volume = `${workingFolder}:/vscode`
-    const vm = spawn('docker', ['run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, this._settings.dockerImage, 'run', '-s', '-n'])
+    let vm: ChildProcess
+    if (this.useDocker()) {
+      const volume = `${workingFolder}:/vscode`
+      vm = spawn('docker', [ 'run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, this._settings.rnodeDockerImage
+                           , 'run', '-s', '-n', '--data-dir', '/vscode/.rnode', '--host', 'localhost'])
+    } else {
+      vm = spawn(this._settings.rnode, ['run', '-s', '-n', '--host', 'localhost', '--data-dir', dataDir])
+    }
+
+    if (!vm.pid) {
+      vm.on('error', error => {
+        this.log(`${error}`)
+      })
+      return
+    }
 
     vm.stderr.on('data', data => {
       const result = `${data}`
@@ -175,12 +217,18 @@ export class RholangServer {
       if (this._settings.showAllOutput) {
         this.log(result.replace(/[\n\r]*$/, ''))
       } else if (!this.isReady) {
-        if (!isStarted) {
-          process.stdout.write('Rholang VM starting ')
-          isStarted = true
+        // Display RNode version info
+        // RChain Node 0.9.1.git4af26be5 (4af26be585c905097be5d474acce693e059ab64b)
+        const versionInfo = regexec(/INFO  coop.rchain.node.Main\$ - (RChain Node .*)/g, result)
+        if (versionInfo) {
+          const [_, version] = versionInfo
+          if (!isStarted) {
+            process.stdout.write(`Starting ${version} `)
+            isStarted = true
+          }
         }
         // Display progress as dots
-        process.stdout.write('.')
+        isStarted && process.stdout.write('.')
       } else if (this.isReady && isReadyOutput) {
         this.log(result.replace(/[\n\r]*$/, ''))
       }
@@ -215,7 +263,10 @@ export class RholangServer {
     this.log('Sending code to Rholang VM ...................................................................')
 
     // Execute code with Docker
-    const vm = spawn('docker', ['exec', rhoTmpName, '/opt/docker/bin/rnode', 'eval', `/vscode/eval.rho`])
+    let vm: ChildProcess
+    this.useDocker()
+    ? vm = spawn('docker', ['exec', rhoTmpName, '/opt/docker/bin/rnode', 'eval', `/vscode/eval.rho`])
+    : vm = spawn(this._settings.rnode, ['eval', filePath])
 
     vm.stderr.on('data', data => {
       const result = `${data}`
@@ -242,10 +293,11 @@ export class RholangServer {
       }
 
       // Deployment cost: CostAccount(39,Cost(1165))
-      const costRegex = /Deployment cost: CostAccount\((\d+),Cost\((\d+)\)\)/g
+      // Deployment cost: Cost(718,)                     - v0.9.1
+      const costRegex = /(Deployment cost:[^\n]+)/g
       const cost = regexec(costRegex, result)
       if (cost) {
-        const [costMsg, n1, n2] = cost
+        const [_, costMsg] = cost
         this.sendClear(uri)
         this.log('')
         this._settings.showAllOutput
@@ -291,6 +343,16 @@ export class RholangServer {
           return [{ range, message }]
         }
       }, {
+        // Errors received during evaluation
+        regex: /Errors received during evaluation:[\n\r]*([\s\S\n\r]+)Storage Contents:/g,
+        diag: ([message, error]) => {
+          const range = {
+            start: { line: 0, character: 0 },
+            end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
+          }
+          return [{ range, message: `Error: ${error}` }]
+        }
+      }, {
         // Any other error
         regex: /Error:[\s\S]+/g,
         diag: ([message, ...ranges]) => {
@@ -314,10 +376,10 @@ export class RholangServer {
         return match
       }
 
-      // Detect syntax error show by calling node
+      // Detect syntax error printed by calling node
       const syntaxError = regexec(/Error:[\s\S]+ Unrecognized interpreter error/g, result)
 
-      const shownMsg = evalTerm || cost || syntaxError || errorParsers.find(showError(result))
+      const shownMsg = syntaxError || errorParsers.find(showError(result)) || evalTerm || cost
       if (this._settings.showAllOutput && !shownMsg) {
         this.log('')
         this.log(`STDOUT:\n${result}`)

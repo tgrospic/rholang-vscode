@@ -2,7 +2,7 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
   "license": "SEE LICENSE IN LICENSE",
@@ -42,15 +42,25 @@
           "default": true,
           "description": "Enable loading of the Language Server and RNode when open a file."
         },
-        "rholang.dockerImage": {
+        "rholang.enableDocker": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run RNode with Docker."
+        },
+        "rholang.rnode": {
           "type": "string",
-          "default": "rchain/rnode:master",
+          "default": "rnode",
+          "description": "RNode executable used by Rholang Language Server."
+        },
+        "rholang.rnodeDockerImage": {
+          "type": "string",
+          "default": "rchain/rnode",
           "description": "Docker image (version) used by Rholang Language Server."
         },
         "rholang.showAllOutput": {
           "type": "boolean",
           "default": false,
-          "description": "Show all output from RNode."
+          "description": "Show all output from RNode in Output Panel."
         }
       }
     },
