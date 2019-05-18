@@ -6,6 +6,7 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
 import * as path from 'path'
+import * as yaml from 'yaml'
 
 const rhoTmpPath = path.join(os.tmpdir(), 'vscode-rholang')
 const rhoTmpName = `eval-${tmpFileName().substr(0, 16)}`
@@ -96,13 +97,15 @@ export class RholangServer {
     // Evaluate the code on save document
     this.connection.onDidSaveTextDocument(params => {
       const uri = params.textDocument.uri
-      this.evalCode(uri)
+      this.isReady
+        ? this.evalCode(uri)
+        : this.connection.window.showWarningMessage('Waiting for RNode to start, please wait.')
     })
 
     // Settings
     let startDelayHandle : NodeJS.Timeout
     this.connection.onDidChangeConfiguration((change) => {
-      this.log('Settings: ' + JSON.stringify(change.settings, null, 2))
+      this.log('Settings.' + yaml.stringify(change.settings))
 
       const oldSettings = this._settings
       this._settings    = change.settings.rholang || {}
@@ -143,7 +146,7 @@ export class RholangServer {
       ...x
     }))
     this._settings.showAllOutput &&
-      this.log('Diagnostics: ' + JSON.stringify(diagnostics, null, 2))
+      this.log('Diagnostics:\n' + yaml.stringify(diagnostics))
     this.connection.sendDiagnostics({ uri, diagnostics })
   }
 
@@ -204,45 +207,42 @@ export class RholangServer {
     })
 
     let isStarted = false
-    // TODO: only temp. to get better output
-    let isReadyOutput = false
 
     // RNode stdout
     vm.stdout.on('data', data => {
-      const result = `${data}`
+      const result = `${data}`.replace(/[\n\r]*$/, '').trim()
 
-      if (result.trim() === '') return
+      if (result === '') return
 
       // Display output from callee rnode
       if (this._settings.showAllOutput) {
-        this.log(result.replace(/[\n\r]*$/, ''))
+        this.log(result)
       } else if (!this.isReady) {
         // Display RNode version info
         // RChain Node 0.9.1.git4af26be5 (4af26be585c905097be5d474acce693e059ab64b)
-        const versionInfo = regexec(/INFO  coop.rchain.node.Main\$ - (RChain Node .*)/g, result)
+        const versionInfo = !isStarted && regexec(/INFO  coop.rchain.node.Main\$ - (RChain Node .*)/g, result)
         if (versionInfo) {
           const [_, version] = versionInfo
-          if (!isStarted) {
-            process.stdout.write(`Starting ${version} `)
-            isStarted = true
-          }
+          process.stdout.write(`Starting ${version} `)
+          isStarted = true
         }
         // Display progress as dots
         isStarted && process.stdout.write('.')
-      } else if (this.isReady && isReadyOutput) {
-        this.log(result.replace(/[\n\r]*$/, ''))
+      } else {
+        // Display evaluated code and result (skip info/warn logs)
+        const nodeLog = regexec(/\[node-runner-[\d]+\] (WARN|INFO)/g, result)
+        !nodeLog && this.log(result)
       }
 
       // Check for log message that node is ready
-      // Sample: INFO  c.r.c.util.comm.CasperPacketHandler$ - Making a transition to ApprovedBlockRecievedHandler state.
-      const ready = regexec(/Making a transition to ApprovedBlockRecievedHandler state/g, result)
-      if (ready) {
-        this.connection.window.showInformationMessage('Rholang VM is ready!')
-        this.log('')
-        this.log('Rholang VM is ready!')
+      const startListen = regexec(/Listening for traffic on rnode:\/\/([\s\S\d]+)./g, result)
+      if (startListen) {
         this.isReady = true
-        // Small delay to supress few starting log msgs
-        setTimeout(() => isReadyOutput = true, 300)
+        const [_, address] = startListen
+        const msg = `Rholang VM is ready! Listening on rnode://${address}`
+        this.log('')
+        this.log(msg)
+        this.connection.window.showInformationMessage(msg)
       }
     })
     return vm
@@ -260,7 +260,7 @@ export class RholangServer {
 
     // Start Rholang VM (eval)
     this.log('')
-    this.log('Sending code to Rholang VM ...................................................................')
+    this.log('>>>>>>>>>>>>>>>>>>>>>> Sending code to Rholang VM >>>>>>>>>>>>>>>>>>>>>>')
 
     // Execute code with Docker
     let vm: ChildProcess

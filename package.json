@@ -2,7 +2,7 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
   "license": "SEE LICENSE IN LICENSE",
@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "vscode-languageclient": "^5.2.1",
-    "vscode-languageserver": "^5.2.1"
+    "vscode-languageserver": "^5.2.1",
+    "yaml": "^1.5.1"
   },
   "devDependencies": {
     "@types/node": "^10.12.19",
