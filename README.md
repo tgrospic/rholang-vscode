@@ -34,6 +34,10 @@ The Language Server is enabled and runs locally installed RNode by default. If R
 
 Currently, one RNode instance is created with one VSCode instance. For each RNode instance unique temp directory is created which holds `.rnode` data directory. If VSCode window is reloaded it will create a fresh instance of RNode also.
 
+## Learn Rholang By Example
+
+If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introduction [Learn Rholang By Example](https://github.com/JoshOrndorff/LearnRholangByExample) for beginners and intermediate programmers.
+
 ## TODO
 
 - add commands, completion, hovers...
@@ -41,6 +45,9 @@ Currently, one RNode instance is created with one VSCode instance. For each RNod
 - ...
 
 ## Release Notes
+
+### 0.4.0 (May 18, 2019)
+- Update for RNode v0.9.5
 
 ### 0.3.0 (April 20, 2019)
 - Support for RNode installed locally

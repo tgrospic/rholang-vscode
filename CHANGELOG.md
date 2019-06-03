@@ -1,5 +1,8 @@
 # Change Log
 
+### 0.4.0 (May 18, 2019)
+- Update for RNode v0.9.5
+
 ### 0.3.0 (April 20, 2019)
 - Support for RNode installed locally
 - Fix v0.9.3 - error detection, cost output
