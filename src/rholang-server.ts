@@ -164,9 +164,9 @@ export class RholangServer {
     if (this.useDocker()) {
       const volume = `${workingFolder}:/vscode`
       vm = spawn('docker', [ 'run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, this._settings.rnodeDockerImage
-                           , 'run', '-s', '-n', '--data-dir', '/vscode/.rnode', '--host', 'localhost'])
+                           , 'run', '-s', '-n', '--data-dir', '/vscode/.rnode', '--host', 'localhost', '--allow-private-addresses'])
     } else {
-      vm = spawn(this._settings.rnode, ['run', '-s', '-n', '--host', 'localhost', '--data-dir', dataDir])
+      vm = spawn(this._settings.rnode, ['run', '-s', '-n', '--host', 'localhost', '--data-dir', dataDir, '--allow-private-addresses'])
     }
 
     if (!vm.pid) {
