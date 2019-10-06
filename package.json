@@ -2,30 +2,38 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.5.0",
+  "version": "0.6.0-preview1",
+  "preview": true,
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.30.x"
   },
-  "main": "./build/extension",
+  "main": "./build/src/extension",
   "activationEvents": [
     "onLanguage:rho"
   ],
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -watch -p ./",
+    "rnode-generate": "rnode-grpc --rnode-version v0.9.14",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "node ./node_modules/vscode/bin/test"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^0.6.5",
+    "@tgrospic/rnode-grpc-js": "^0.8.1",
+    "google-protobuf": "^3.9.1",
     "vscode-languageclient": "^5.2.1",
     "vscode-languageserver": "^5.2.1",
     "yaml": "^1.5.1"
   },
   "devDependencies": {
+    "@types/elliptic": "^6.4.10",
     "@types/node": "^10.12.19",
+    "grpc-tools": "^1.8.0",
+    "protobufjs": "^6.8.8",
     "typescript": "^3.2.4",
     "vscode": "^1.1.33"
   },

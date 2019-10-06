@@ -7,7 +7,7 @@ import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } f
 
 export function activate(context: ExtensionContext) {
   // The Rholang Language Server path
-  const serverModule = context.asAbsolutePath(path.join('build', 'server.js'))
+  const serverModule = context.asAbsolutePath(path.join('build/src', 'server.js'))
   // The debug options for the server
   const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] }
 

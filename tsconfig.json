@@ -5,10 +5,13 @@
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"lib" : [ "es2016" ],
-		"outDir": "build"
+		"outDir": "build",
+    "allowJs": true,
+    "resolveJsonModule": true
 	},
 	"exclude": [
     "node_modules",
-    ".vscode-test"
+    ".vscode-test",
+    "build"
 	]
 }

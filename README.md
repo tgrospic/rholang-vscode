@@ -46,6 +46,13 @@ If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introd
 
 ## Release Notes
 
+### 0.6.0 (October 06, 2019)
+- Switch to gRPC connection :rocket:
+- Update for RNode v0.9.{14,15} (new API)
+
+### 0.5.0 (June 13, 2019)
+- Update RNode option `--allow-private-addresses`
+
 ### 0.4.0 (May 18, 2019)
 - Update for RNode v0.9.5
 

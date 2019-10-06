@@ -7,6 +7,20 @@ import * as os from 'os'
 import * as crypto from 'crypto'
 import * as path from 'path'
 import * as yaml from 'yaml'
+// RNode gRPC
+import * as grpc from '@grpc/grpc-js'
+import { rnodeRepl } from '@tgrospic/rnode-grpc-js'
+import * as protoSchema from '../rnode-grpc-gen/js/pbjs_generated.json'
+import '../rnode-grpc-gen/js/repl_pb'
+
+// Repl gRPC service
+const rnodePort0 = 30400
+const options = {
+  grpcLib: grpc,
+  host: `localhost:${rnodePort0+2}`,
+  protoSchema,
+}
+const { Eval } = rnodeRepl(options)
 
 const rhoTmpPath = path.join(os.tmpdir(), 'vscode-rholang')
 const rhoTmpName = `eval-${tmpFileName().substr(0, 16)}`
@@ -99,7 +113,7 @@ export class RholangServer {
       const uri = params.textDocument.uri
       this.isReady
         ? this.evalCode(uri)
-        : this.connection.window.showWarningMessage('Waiting for RNode to start, please wait.')
+        : this.connection.window.showWarningMessage('RNode is starting, please wait...')
     })
 
     // Settings
@@ -159,14 +173,30 @@ export class RholangServer {
     // Create working folder, as current user (Docker run as root)
     if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', workingFolder])
 
+    // RNode ports
+    const [port0, port1, port2, port3, port4] = [0, 1, 2, 3, 4].map(x => rnodePort0 + x)
+
+    const runCmd = dir => [
+      '--grpc-port', `${port1}`, '--grpc-port-internal', `${port2}`,
+      'run', '-s', '-n', '--data-dir', dir, '--host', 'localhost', '--allow-private-addresses',
+      '-p', `${port0}`, '--http-port', `${port3}`, '--kademlia-port', `${port4}`,
+    ]
+
     // Start RNode (standalone) process used by the server
     let vm: ChildProcess
     if (this.useDocker()) {
       const volume = `${workingFolder}:/vscode`
-      vm = spawn('docker', [ 'run', '-i', '--rm', '--name', rhoTmpName, '-v', volume, this._settings.rnodeDockerImage
-                           , 'run', '-s', '-n', '--data-dir', '/vscode/.rnode', '--host', 'localhost', '--allow-private-addresses'])
+      vm = spawn('docker', [
+        // Docker run
+        'run', '-i', '--rm', '--name', rhoTmpName, '-v', volume,
+               '-p', `${port0}:${port0}`, '-p', `${port1}:${port1}`, '-p', `${port2}:${port2}`,
+               '-p', `${port3}:${port3}`, '-p', `${port4}:${port4}`,
+        // RNode run
+        this._settings.rnodeDockerImage, ...runCmd('/vscode/.rnode'),
+      ])
     } else {
-      vm = spawn(this._settings.rnode, ['run', '-s', '-n', '--host', 'localhost', '--data-dir', dataDir, '--allow-private-addresses'])
+      // RNode run
+      vm = spawn(this._settings.rnode, runCmd(dataDir))
     }
 
     if (!vm.pid) {
@@ -199,10 +229,18 @@ export class RholangServer {
         this.log(`Error: ${message}`)
       }
 
-      const knownMsg = syntaxError
-      if (this._settings.showAllOutput && !knownMsg) {
+      // [rchain] Error: ...
+      const rchainError = regexec(/\[rchain\] (Error: .+)./g, result)
+      if (rchainError) {
+        const [_, err] = rchainError
         this.log('')
-        this.log(`STDERR:\n${result}`)
+        this.log(err)
+      }
+
+      const knownMsg = syntaxError || rchainError
+      if (!knownMsg) {
+        // This will catch Docker downloading messages
+        process.stdout.write(data)
       }
     })
 
@@ -214,7 +252,7 @@ export class RholangServer {
 
       if (result === '') return
 
-      // Display output from callee rnode
+      // Display RNode output
       if (this._settings.showAllOutput) {
         this.log(result)
       } else if (!this.isReady) {
@@ -230,7 +268,7 @@ export class RholangServer {
         isStarted && process.stdout.write('.')
       } else {
         // Display evaluated code and result (skip info/warn logs)
-        const nodeLog = regexec(/\[node-runner-[\d]+\] (WARN|INFO)/g, result)
+        const nodeLog = regexec(/\[[a-z-]+[\d]+\] (WARN|INFO)/g, result)
         !nodeLog && this.log(result)
       }
 
@@ -239,9 +277,14 @@ export class RholangServer {
       if (startListen) {
         this.isReady = true
         const [_, address] = startListen
-        const msg = `Rholang VM is ready! Listening on rnode://${address}`
+        const msgReady = `Rholang VM is ready!`
+        const msgListen = `Listening on rnode://${address}`
+        const msg = `${msgReady} ${msgListen}`
         this.log('')
-        this.log(msg)
+        this.log(msgListen)
+        this.log(`Ports - gRPC external/internal ${port1}/${port2}`)
+        this.log(`      - rnode/http/kademlia ${port0}/${port3}/${port4}`)
+        this.log(msgReady)
         this.connection.window.showInformationMessage(msg)
       }
     })
@@ -254,138 +297,113 @@ export class RholangServer {
     const document = this.documents.get(uri)
     const codeString = document.getText()
 
-    // Write code to a file
-    const filePath = `${workingFolder}/eval.rho`
-    fs.writeFileSync(filePath, codeString, 'utf-8')
-
     // Start Rholang VM (eval)
     this.log('')
     this.log('>>>>>>>>>>>>>>>>>>>>>> Sending code to Rholang VM >>>>>>>>>>>>>>>>>>>>>>')
 
-    // Execute code with Docker
-    let vm: ChildProcess
-    this.useDocker()
-    ? vm = spawn('docker', ['exec', rhoTmpName, '/opt/docker/bin/rnode', 'eval', `/vscode/eval.rho`])
-    : vm = spawn(this._settings.rnode, ['eval', filePath])
+    // Evaluate editor text
+    Eval({program: codeString, printunmatchedsendsonly: true})
+      .then(({output}) => this.processEvalResult(uri, output))
+  }
 
-    vm.stderr.on('data', data => {
-      const result = `${data}`
-      if (this._settings.showAllOutput && result.trim() != '') {
+  processEvalResult(uri, output: string) {
+    // Ensure it's string
+    const result = `${output}`
+
+    if (result.trim() === '') return
+
+    // Deployment cost: CostAccount(39,Cost(1165))
+    // Deployment cost: Cost(718,)                     - v0.9.1
+    const costRegex = /(Deployment cost:[^\n]+)/g
+    const cost = regexec(costRegex, result)
+    if (cost) {
+      const [_, costMsg] = cost
+      this.sendClear(uri)
+      this.log('')
+      this._settings.showAllOutput
+        ? this.log(result)
+        : this.log(costMsg)
+    }
+
+    // Compile errors
+
+    const errorParsers = [{
+      // Free names
+      // Error: coop.rchain.rholang.interpreter.errors$TopLevelFreeVariablesNotAllowedError: Top level free variables are not allowed: x at 18:5.
+      regex: /Error:[\s\S]+ (\d+):(\d+)\./g,
+      diag: ([message, ...ranges]) => {
+        const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+        const range = {
+          start: { line: sl, character: sc },
+          end: { line: sl, character: sc },
+        }
+        return [{ range, message }]
+      }
+    }, {
+      // Name/Process type error
+      // Error: coop.rchain.rholang.interpreter.errors$UnexpectedProcContext: Name variable: x at 17:5 used in process context at 17:17
+      // Error: coop.rchain.rholang.interpreter.errors$UnexpectedNameContext: Proc variable: x at 19:6 used in Name context at 19:19
+      regex: /Error:[\s\S]+ (\d+):(\d+) used in \w+ context at (\d+):(\d+)/g,
+      diag: ([message, ...ranges]) => {
+        const [sl1, sc1, sl2, sc2] = ranges.map(x => parseInt(x) - 1)
+        // Make range with the same start/end
+        const r = (line, character, msg) => ({ range: { start: { line, character }, end: { line, character }, }, message: msg })
+        return [r(sl1, sc1, message), r(sl2, sc2, message)]
+      }
+    }, {
+      // Error with line identification
+      // Error: coop.rchain.rholang.interpreter.errors$LexerError: Illegal Character <?> at 4:4(9)
+      regex: /Error:[\s\S]+ (\d+):(\d+)[\s\S]+/g,
+      diag: ([message, ...ranges]) => {
+        const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+        const range = {
+          start: { line: sl, character: sc },
+          end: { line: sl, character: sc },
+        }
+        return [{ range, message }]
+      }
+    }, {
+      // Errors received during evaluation
+      regex: /Errors received during evaluation:[\n\r]*([\s\S\n\r]+)Storage Contents:/g,
+      diag: ([message, error]) => {
+        const range = {
+          start: { line: 0, character: 0 },
+          end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
+        }
+        return [{ range, message: `Error: ${error}` }]
+      }
+    }, {
+      // Any other error
+      regex: /Error:[\s\S]+/g,
+      diag: ([message, ...ranges]) => {
+        const [sl, sc] = ranges.map(x => parseInt(x) - 1)
+        const range = {
+          start: { line: 0, character: 0 },
+          end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
+        }
+        return [{ range, message }]
+      }
+    }]
+
+    const showError = str => ({regex, diag}) => {
+      const match = regexec(regex, str)
+      if (match) {
+        const errors = diag(match)
+        this.sendErrors(uri, ...errors)
         this.log('')
-        this.log(`STDERR:\n${result}`)
+        this.log(errors[0].message)
       }
-    })
+      return match
+    }
 
-    // Listen for compiler results
-    vm.stdout.on('data', data => {
-      // Ensure it's string
-      const result = `${data}`
+    // Detect syntax error printed on RNode stdout
+    const syntaxError = regexec(/Error:[\s\S]+ Unrecognized interpreter error/g, result)
 
-      if (result.trim() === '') return
-
-      // Evaluating term
-      const evalTermRegex = /[\s\S]+(Evaluating:[\n ]+.+)/g
-      const evalTerm = regexec(evalTermRegex, result)
-      if (evalTerm) {
-        const [_, evalMsg] = evalTerm
-        this.log('')
-        this.log(evalMsg)
-      }
-
-      // Deployment cost: CostAccount(39,Cost(1165))
-      // Deployment cost: Cost(718,)                     - v0.9.1
-      const costRegex = /(Deployment cost:[^\n]+)/g
-      const cost = regexec(costRegex, result)
-      if (cost) {
-        const [_, costMsg] = cost
-        this.sendClear(uri)
-        this.log('')
-        this._settings.showAllOutput
-          ? this.log(result)
-          : this.log(costMsg)
-      }
-
-      // Compile errors
-
-      const errorParsers = [{
-        // Free names
-        // Error: coop.rchain.rholang.interpreter.errors$TopLevelFreeVariablesNotAllowedError: Top level free variables are not allowed: x at 18:5.
-        regex: /Error:[\s\S]+ (\d+):(\d+)\./g,
-        diag: ([message, ...ranges]) => {
-          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
-          const range = {
-            start: { line: sl, character: sc },
-            end: { line: sl, character: sc },
-          }
-          return [{ range, message }]
-        }
-      }, {
-        // Name/Process type error
-        // Error: coop.rchain.rholang.interpreter.errors$UnexpectedProcContext: Name variable: x at 17:5 used in process context at 17:17
-        // Error: coop.rchain.rholang.interpreter.errors$UnexpectedNameContext: Proc variable: x at 19:6 used in Name context at 19:19
-        regex: /Error:[\s\S]+ (\d+):(\d+) used in \w+ context at (\d+):(\d+)/g,
-        diag: ([message, ...ranges]) => {
-          const [sl1, sc1, sl2, sc2] = ranges.map(x => parseInt(x) - 1)
-          // Make range with the same start/end
-          const r = (line, character, msg) => ({ range: { start: { line, character }, end: { line, character }, }, message: msg })
-          return [r(sl1, sc1, message), r(sl2, sc2, message)]
-        }
-      }, {
-        // Error with line identification
-        // Error: coop.rchain.rholang.interpreter.errors$LexerError: Illegal Character <?> at 4:4(9)
-        regex: /Error:[\s\S]+ (\d+):(\d+)[\s\S]+/g,
-        diag: ([message, ...ranges]) => {
-          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
-          const range = {
-            start: { line: sl, character: sc },
-            end: { line: sl, character: sc },
-          }
-          return [{ range, message }]
-        }
-      }, {
-        // Errors received during evaluation
-        regex: /Errors received during evaluation:[\n\r]*([\s\S\n\r]+)Storage Contents:/g,
-        diag: ([message, error]) => {
-          const range = {
-            start: { line: 0, character: 0 },
-            end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
-          }
-          return [{ range, message: `Error: ${error}` }]
-        }
-      }, {
-        // Any other error
-        regex: /Error:[\s\S]+/g,
-        diag: ([message, ...ranges]) => {
-          const [sl, sc] = ranges.map(x => parseInt(x) - 1)
-          const range = {
-            start: { line: 0, character: 0 },
-            end: { line: Number.MAX_VALUE, character: Number.MAX_VALUE },
-          }
-          return [{ range, message }]
-        }
-      }]
-
-      const showError = str => ({regex, diag}) => {
-        const match = regexec(regex, str)
-        if (match) {
-          const errors = diag(match)
-          this.sendErrors(uri, ...errors)
-          this.log('')
-          this.log(errors[0].message)
-        }
-        return match
-      }
-
-      // Detect syntax error printed by calling node
-      const syntaxError = regexec(/Error:[\s\S]+ Unrecognized interpreter error/g, result)
-
-      const shownMsg = syntaxError || errorParsers.find(showError(result)) || evalTerm || cost
-      if (this._settings.showAllOutput && !shownMsg) {
-        this.log('')
-        this.log(`STDOUT:\n${result}`)
-      }
-
-    })
+    const shownMsg = syntaxError || errorParsers.find(showError(result)) || cost
+    if (this._settings.showAllOutput && !shownMsg) {
+      this.log('')
+      this.log(`EVAL RESULT:\n${result}`)
+    }
   }
 
 }
