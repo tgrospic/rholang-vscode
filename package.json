@@ -2,7 +2,7 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.6.0-preview1",
+  "version": "0.6.0",
   "preview": true,
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
@@ -17,14 +17,17 @@
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -watch -p ./",
-    "rnode-generate": "rnode-grpc --rnode-version v0.9.14",
-    "postinstall": "node ./node_modules/vscode/bin/install",
+    "rnode-generate": "rnode-grpc --rnode-version v0.9.14 --include-reflection true",
+    "vscode-postinstall": "node ./node_modules/vscode/bin/install",
+    "postinstall": "npm-run-all -p vscode-postinstall rnode-generate",
     "test": "node ./node_modules/vscode/bin/test"
   },
   "dependencies": {
     "@grpc/grpc-js": "^0.6.5",
-    "@tgrospic/rnode-grpc-js": "^0.8.1",
+    "@tgrospic/rnode-grpc-js": "^0.8.2",
     "google-protobuf": "^3.9.1",
+    "npm-run-all": "^4.1.5",
+    "ramda": "^0.26.1",
     "vscode-languageclient": "^5.2.1",
     "vscode-languageserver": "^5.2.1",
     "yaml": "^1.5.1"
@@ -32,6 +35,7 @@
   "devDependencies": {
     "@types/elliptic": "^6.4.10",
     "@types/node": "^10.12.19",
+    "@types/ramda": "^0.26.26",
     "grpc-tools": "^1.8.0",
     "protobufjs": "^6.8.8",
     "typescript": "^3.2.4",

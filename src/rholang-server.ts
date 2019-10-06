@@ -2,6 +2,7 @@ import Uri from 'vscode-uri'
 import { IConnection, TextDocuments } from 'vscode-languageserver'
 import { DiagnosticSeverity } from "vscode-languageserver-types"
 import { spawn, ChildProcess } from 'child_process'
+import * as R from 'ramda'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
@@ -9,19 +10,17 @@ import * as path from 'path'
 import * as yaml from 'yaml'
 // RNode gRPC
 import * as grpc from '@grpc/grpc-js'
-import { rnodeRepl } from '@tgrospic/rnode-grpc-js'
+import { rnodeProtobuf, EvalRequest, ServerReflectionRequest, ServerReflectionResponse } from '@tgrospic/rnode-grpc-js'
 import * as protoSchema from '../rnode-grpc-gen/js/pbjs_generated.json'
 import '../rnode-grpc-gen/js/repl_pb'
+import '../rnode-grpc-gen/js/reflection_pb'
 
-// Repl gRPC service
+// Repl gRPC settings
 const rnodePort0 = 30400
-const options = {
-  grpcLib: grpc,
-  host: `localhost:${rnodePort0+2}`,
-  protoSchema,
-}
-const { Eval } = rnodeRepl(options)
+const rnodeUrl = `localhost:${rnodePort0+2}`
+const pbTypes = rnodeProtobuf({ protoSchema })
 
+// Directory paths
 const rhoTmpPath = path.join(os.tmpdir(), 'vscode-rholang')
 const rhoTmpName = `eval-${tmpFileName().substr(0, 16)}`
 const workingFolder = path.join(rhoTmpPath, rhoTmpName)
@@ -44,6 +43,47 @@ function regexec(regex, str) {
   return result[0]
 }
 
+const rnodeGetReplService = (client: grpc.Client) =>
+  new Promise((resolve, reject) => {
+    // Call RNode reflection method
+    const comm = client.makeBidiStreamRequest<ServerReflectionRequest, ServerReflectionResponse>(
+      `/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
+      R.pipe(pbTypes.ServerReflectionRequest.serialize, Buffer.from),
+      pbTypes.ServerReflectionResponse.deserialize,
+    )
+    // Send request
+    comm.write({ listServices: '-' })
+
+    // Receive response
+    comm.on('data', (resultMsg: ServerReflectionResponse) => {
+      // console.log('DATA_RECEIVED', resultMsg.listServicesResponse.serviceList)
+      const services = resultMsg.listServicesResponse.serviceList
+      const replService = R.find(({name}) => !!name.match(/.Repl$/i), services)
+      resolve(replService)
+      comm.cancel()
+    })
+    comm.on('error', reject)
+  })
+
+/**
+ * Evaluate Rholang code on RNode
+ * - handle both versions (namespaces) of API
+ */
+const rnodeReplEval = async (replReq: EvalRequest, replServiceName: string, client: grpc.Client) =>
+  new Promise((resolve, reject) => {
+    // Call RNode Eval method
+    client.makeUnaryRequest(
+      `/${replServiceName}/Eval`,
+      R.pipe(pbTypes.EvalRequest.serialize, Buffer.from),
+      pbTypes.ReplResponse.deserialize,
+      replReq,
+      (err, result) => {
+        if (err) reject(err)
+        else resolve(result)
+      }
+    )
+  })
+
 type Settings = {
   enableLanguageServer: boolean
   rnode               : string
@@ -59,6 +99,8 @@ export class RholangServer {
   private _uri: string | undefined
   private _settings: Settings
   isReady = false
+  grpcReplServicePath = null
+  grpcClient: grpc.Client = null
 
   constructor(
     protected readonly connection: IConnection,
@@ -260,6 +302,7 @@ export class RholangServer {
         // RChain Node 0.9.1.git4af26be5 (4af26be585c905097be5d474acce693e059ab64b)
         const versionInfo = !isStarted && regexec(/INFO  coop.rchain.node.Main\$ - (RChain Node .*)/g, result)
         if (versionInfo) {
+          // Display version info
           const [_, version] = versionInfo
           process.stdout.write(`Starting ${version} `)
           isStarted = true
@@ -275,17 +318,31 @@ export class RholangServer {
       // Check for log message that node is ready
       const startListen = regexec(/Listening for traffic on rnode:\/\/([\s\S\d]+)./g, result)
       if (startListen) {
-        this.isReady = true
-        const [_, address] = startListen
-        const msgReady = `Rholang VM is ready!`
-        const msgListen = `Listening on rnode://${address}`
-        const msg = `${msgReady} ${msgListen}`
-        this.log('')
-        this.log(msgListen)
-        this.log(`Ports - gRPC external/internal ${port1}/${port2}`)
-        this.log(`      - rnode/http/kademlia ${port0}/${port3}/${port4}`)
-        this.log(msgReady)
-        this.connection.window.showInformationMessage(msg)
+        // Create new gRPC client (after losing connection)
+        this.grpcClient = new grpc.Client(rnodeUrl, grpc.credentials.createInsecure())
+        // Get repl service path
+        const replPath = 'coop.rchain.node.model.Repl'
+        rnodeGetReplService(this.grpcClient)
+          .then(({name}) => name)
+          .catch(err => {
+            this.log(``)
+            this.log(`Can\'t get Repl service name, fallback to default ${replPath}, ${err.message}`)
+            return replPath
+          })
+          .then(name => this.grpcReplServicePath = name)
+          .finally(() => {
+            this.isReady = true
+            const [_, address] = startListen
+            const msgReady = `Rholang VM is ready!`
+            const msgListen = `Listening on rnode://${address}`
+            const msg = `${msgReady} ${msgListen}`
+            this.log('')
+            this.log(msgListen)
+            this.log(`Ports - gRPC external/internal ${port1}/${port2}`)
+            this.log(`      - rnode/http/kademlia ${port0}/${port3}/${port4}`)
+            this.log(msgReady)
+            this.connection.window.showInformationMessage(msg)
+          })
       }
     })
     return vm
@@ -302,7 +359,7 @@ export class RholangServer {
     this.log('>>>>>>>>>>>>>>>>>>>>>> Sending code to Rholang VM >>>>>>>>>>>>>>>>>>>>>>')
 
     // Evaluate editor text
-    Eval({program: codeString, printunmatchedsendsonly: true})
+    rnodeReplEval({program: codeString, printunmatchedsendsonly: true}, this.grpcReplServicePath, this.grpcClient)
       .then(({output}) => this.processEvalResult(uri, output))
   }
 

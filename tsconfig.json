@@ -9,6 +9,10 @@
     "allowJs": true,
     "resolveJsonModule": true
 	},
+  "include": [
+    "src/**/*",
+    "rnode-grpc-gen/js/rnode-grpc-js.d.ts"
+  ],
 	"exclude": [
     "node_modules",
     ".vscode-test",
