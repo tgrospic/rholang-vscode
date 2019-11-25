@@ -61,7 +61,7 @@ If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introd
 - Fix v0.9.3 - error detection, cost output
 
 ### 0.2.0 (February 11, 2019)
-- Docker image user settings (default `rchain/rnode:master`)
+- Docker image user settings
 
 ### 0.1.0 (February 02, 2019)
 - Grammar update for Rholang Mercury release v0.8>.
@@ -84,6 +84,6 @@ If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introd
 [arch-namespace-logic]: http://rchain-architecture.readthedocs.io/en/latest/contracts/namespaces.html#namespace-logic
 [tuplespaces-to-picalculus]: http://mobile-process-calculi-for-programming-the-new-blockchain.readthedocs.io/en/latest/actors-tuples-and-pi.html#from-tuplespaces-to-calculus
 
-[beta-badge]: https://cdn.jsdelivr.net/gh/tgrospic/rholang-vscode@v0.3.0/assets/beta.svg
+[beta-badge]: https://cdn.jsdelivr.net/gh/tgrospic/rholang-vscode@v0.6.1/assets/beta.svg
 [screenshot]: https://github.com/tgrospic/rholang-vscode/raw/v0.3.0/assets/rholang-sample.gif
 [license]: https://github.com/tgrospic/rholang-vscode/blob/master/LICENSE
