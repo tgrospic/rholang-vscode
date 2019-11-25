@@ -3,7 +3,7 @@ import { IConnection, TextDocuments } from 'vscode-languageserver'
 import { DiagnosticSeverity } from "vscode-languageserver-types"
 import { spawn, ChildProcess } from 'child_process'
 import * as R from 'ramda'
-import * as fs from 'fs'
+import * as fs from 'fs-extra'
 import * as os from 'os'
 import * as crypto from 'crypto'
 import * as path from 'path'
@@ -56,7 +56,6 @@ const rnodeGetReplService = (client: grpc.Client) =>
 
     // Receive response
     comm.on('data', (resultMsg: ServerReflectionResponse) => {
-      // console.log('DATA_RECEIVED', resultMsg.listServicesResponse.serviceList)
       const services = resultMsg.listServicesResponse.serviceList
       const replService = R.find(({name}) => !!name.match(/.Repl$/i), services)
       resolve(replService)
@@ -213,7 +212,7 @@ export class RholangServer {
 
   startRNode() {
     // Create working folder, as current user (Docker run as root)
-    if (!fs.existsSync(workingFolder)) spawn('mkdir', ['-p', workingFolder])
+    if (!fs.existsSync(workingFolder)) fs.ensureDir(workingFolder)
 
     // RNode ports
     const [port0, port1, port2, port3, port4] = [0, 1, 2, 3, 4].map(x => rnodePort0 + x)
