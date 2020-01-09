@@ -351,7 +351,7 @@ export class RholangServer {
     // Global uri until caller gets all errors
     this._uri = uri
     const document = this.documents.get(uri)
-    const codeString = document.getText()
+    const codeString = document.getText().replace(/\r/g, '')
 
     // Start Rholang VM (eval)
     this.log('')

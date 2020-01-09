@@ -2,7 +2,7 @@
   "name": "rholang",
   "displayName": "Rholang",
   "description": "Language support for Rholang. Official language for RChain distributed virtual machine.",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "preview": false,
   "publisher": "tgrospic",
   "author": "Tomislav Grospic",
