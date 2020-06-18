@@ -152,9 +152,11 @@ export class RholangServer {
     // Evaluate the code on save document
     this.connection.onDidSaveTextDocument(params => {
       const uri = params.textDocument.uri
-      this.isReady
-        ? this.evalCode(uri)
-        : this.connection.window.showWarningMessage('RNode is starting, please wait...')
+      if(this.isReady) {
+        this.evalCode(uri)
+      } else if(this._settings.enableLanguageServer) {
+          this.connection.window.showWarningMessage('RNode is starting, please wait...')
+      }
     })
 
     // Settings
