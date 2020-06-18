@@ -88,6 +88,7 @@ type Settings = {
   rnode               : string
   enableDocker        : boolean
   rnodeDockerImage    : string
+  dockerRunOptions    : string
   showAllOutput       : boolean
 }
 
@@ -110,7 +111,11 @@ export class RholangServer {
     let rhovm : ChildProcess
 
     const stopRNodeProcess = useDocker => {
+      log(`Stopping RChain Node.`)
+
       if (rhovm) {
+        this.log(`Process PID: ${rhovm.pid}`)
+
         try {
           if (useDocker) spawn('docker', ['stop', rhoTmpName], { detached: true, stdio: 'ignore' })
           else process.kill(rhovm.pid)
@@ -169,12 +174,16 @@ export class RholangServer {
       const diffs = (newS: Settings, oldS: Settings) => [
         [true              , newS.enableLanguageServer, oldS.enableLanguageServer],
         [true              , newS.enableDocker        , oldS.enableDocker],
+        [true              , newS.dockerRunOptions    , oldS.dockerRunOptions],
         [!newS.enableDocker, newS.rnode               , oldS.rnode]  ,
         [newS.enableDocker , newS.rnodeDockerImage    , oldS.rnodeDockerImage],
       ]
       if(!oldSettings || diffs(this._settings, oldSettings).find(([s, x, y]) => s && x !== y)) {
         // If settings change
-        oldSettings && stopRNodeProcess(oldSettings.enableDocker)
+        oldSettings && 
+          (oldSettings.enableDocker || oldSettings.dockerRunOptions) && 
+          stopRNodeProcess(oldSettings.enableDocker)
+
         const startNode = () => {
           if (this._settings.enableLanguageServer) {
             log('Rholang Language Server (enabled)')
@@ -225,18 +234,24 @@ export class RholangServer {
       '-p', `${port0}`, '--http-port', `${port3}`, '--kademlia-port', `${port4}`,
     ]
 
-    // Start RNode (standalone) process used by the server
-    let vm: ChildProcess
-    if (this.useDocker()) {
+    const dockerCmd = runOptions => {
       const volume = `${workingFolder}:/vscode`
-      vm = spawn('docker', [
+      let cmd = [
         // Docker run
         'run', '-i', '--rm', '--name', rhoTmpName, '-v', volume,
                '-p', `${port0}:${port0}`, '-p', `${port1}:${port1}`, '-p', `${port2}:${port2}`,
                '-p', `${port3}:${port3}`, '-p', `${port4}:${port4}`,
-        // RNode run
-        this._settings.rnodeDockerImage, ...runCmd('/vscode/.rnode'),
-      ])
+       ]
+      runOptions && runOptions.length != 0 && cmd.push(`${runOptions}`)
+      cmd.push(this._settings.rnodeDockerImage)
+      cmd.push(...runCmd('/vscode/.rnode'))
+      return cmd
+    }
+
+    // Start RNode (standalone) process used by the server
+    let vm: ChildProcess
+    if (this.useDocker()) {
+      vm = spawn('docker', dockerCmd(this._settings.dockerRunOptions))
     } else {
       // RNode run
       vm = spawn(this._settings.rnode, runCmd(dataDir))
