@@ -353,7 +353,8 @@ export class RholangServer {
     // Global uri until caller gets all errors
     this._uri = uri
     const document = this.documents.get(uri)
-    const codeString = document.getText().replace(/\r/g, '')
+    const codeStringRaw = document.getText().replace(/\r/g, '')
+    const codeString    = this.removeUnsupportedNames(codeStringRaw)
 
     // Start Rholang VM (eval)
     this.log('')
@@ -362,6 +363,14 @@ export class RholangServer {
     // Evaluate editor text
     rnodeReplEval({program: codeString, printunmatchedsendsonly: true}, this.grpcReplServicePath, this.grpcClient)
       .then(({output}) => this.processEvalResult(uri, output))
+  }
+
+  removeUnsupportedNames(codeRaw: string) {
+    // Erase blockchain specific names from the input Rholang code
+    const regex = /\(`rho:rchain:deployId`\)/g
+    const code  = codeRaw.replace(regex, '/*rho:rchain:deployId*/')
+
+    return code
   }
 
   processEvalResult(uri, output: string) {
