@@ -368,7 +368,9 @@ export class RholangServer {
   removeUnsupportedNames(codeRaw: string) {
     // Erase blockchain specific names from the input Rholang code
     const regex = /\(`rho:rchain:deployId`\)/g
-    const code  = codeRaw.replace(regex, '/*rho:rchain:deployId*/')
+    const code1  = codeRaw.replace(regex, '/*rho:rchain:deployId*/')
+    const regex1 = /\(`rho:rchain:deployerId`\)/g
+    const code  = codeRaw.replace(regex1, '/*rho:rchain:deployerId*/')
 
     return code
   }
