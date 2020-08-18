@@ -14,14 +14,14 @@
 		"description": "Create a new receive process"
   },
   "Send process": {
-		"prefix": "sen",
+		"prefix": "send",
 		"body": [
 			"$1!($1)",
 		],
 		"description": "Create a new send process"
   },
   "Contract": {
-		"prefix": "con",
+		"prefix": "contract",
 		"body": [
 			"contract $1($2) = {$3}",
 		],
