@@ -370,7 +370,7 @@ export class RholangServer {
     const regex = /\(`rho:rchain:deployId`\)/g
     const code1  = codeRaw.replace(regex, '/*rho:rchain:deployId*/')
     const regex1 = /\(`rho:rchain:deployerId`\)/g
-    const code  = codeRaw.replace(regex1, '/*rho:rchain:deployerId*/')
+    const code  = code1.replace(regex1, '/*rho:rchain:deployerId*/')
 
     return code
   }
