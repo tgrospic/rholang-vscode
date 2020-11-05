@@ -44,6 +44,14 @@ If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introd
 - connect with the compiler (get semantic info)
 - ...
 
+## Publish
+
+### [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/vscode)   
+`vsce publish -p <token>`
+
+### [Open VSX Registry](https://open-vsx.org)  
+`ovsx publish -p <token>`
+
 ## Release Notes
 
 ### 0.6.0 (October 06, 2019)
