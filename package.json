@@ -37,7 +37,7 @@
     "@types/elliptic": "^6.4.10",
     "@types/node": "^10.12.19",
     "@types/ramda": "^0.26.26",
-    "grpc-tools": "^1.8.0",
+    "grpc-tools": "^1.9.1",
     "protobufjs": "^6.8.8",
     "typescript": "^3.2.4",
     "vscode": "^1.1.33"
