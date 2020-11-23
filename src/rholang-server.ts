@@ -89,6 +89,9 @@ type Settings = {
   enableDocker        : boolean
   rnodeDockerImage    : string
   showAllOutput       : boolean
+  // Experimental - modify Rholang code
+  unsupportedNamesRemoveEnable: boolean
+  unsupportedNames            : string
 }
 
 export class RholangServer {
@@ -354,7 +357,9 @@ export class RholangServer {
     this._uri = uri
     const document = this.documents.get(uri)
     const codeStringRaw = document.getText().replace(/\r/g, '')
-    const codeString    = this.removeUnsupportedNames(codeStringRaw)
+    const codeString    = this._settings.unsupportedNamesRemoveEnable
+      ? this.removeUnsupportedNames(codeStringRaw)
+      : codeStringRaw
 
     // Start Rholang VM (eval)
     this.log('')
@@ -365,14 +370,14 @@ export class RholangServer {
       .then(({output}) => this.processEvalResult(uri, output))
   }
 
-  removeUnsupportedNames(codeRaw: string) {
-    // Erase blockchain specific names from the input Rholang code
-    const regex = /\(`rho:rchain:deployId`\)/g
-    const code1  = codeRaw.replace(regex, '/*rho:rchain:deployId*/')
-    const regex1 = /\(`rho:rchain:deployerId`\)/g
-    const code  = code1.replace(regex1, '/*rho:rchain:deployerId*/')
-
-    return code
+  // Erase blockchain specific names from the input Rholang code
+  removeUnsupportedNames(code: string) {
+    const names = this._settings.unsupportedNames.split(' ').map(x => x.trim())
+    const removeNames = R.reduce((acc: string, name: string) => {
+      const regex = new RegExp(`\\(\`${name}\`\\)`, 'g')
+      return acc.replace(regex, `/*${name}*/`)
+    })
+    return removeNames(code, names)
   }
 
   processEvalResult(uri, output: string) {

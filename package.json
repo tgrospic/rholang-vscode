@@ -75,6 +75,16 @@
           "type": "boolean",
           "default": false,
           "description": "Show all output from RNode in Output Panel."
+        },
+        "rholang.unsupportedNamesRemoveEnable": {
+          "type": "boolean",
+          "default": false,
+          "description": "[Experimental] Enable removal of unsupported names before evaluation."
+        },
+        "rholang.unsupportedNames": {
+          "type": "string",
+          "default": "rho:rchain:deployId rho:rchain:deployerId",
+          "description": "[Experimental] Rholang names to be removed from the code before evaluated (space separated)."
         }
       }
     },
