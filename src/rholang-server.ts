@@ -223,9 +223,9 @@ export class RholangServer {
     const [port0, port1, port2, port3, port4] = [0, 1, 2, 3, 4].map(x => rnodePort0 + x)
 
     const runCmd = dir => [
-      '--grpc-port', `${port1}`, '--grpc-port-internal', `${port2}`,
-      'run', '-s', '-n', '--data-dir', dir, '--host', 'localhost', '--allow-private-addresses',
-      '-p', `${port0}`, '--http-port', `${port3}`, '--kademlia-port', `${port4}`,
+      'run', '-s', '--no-upnp', '--data-dir', dir, '--host', 'localhost', '--allow-private-addresses',
+      '--protocol-port', `${port0}`, '--api-port-grpc-external', `${port1}`, '--api-port-grpc-internal', `${port2}`,
+      '--api-port-http', `${port3}`, '--discovery-port', `${port4}`,
     ]
 
     // Start RNode (standalone) process used by the server
