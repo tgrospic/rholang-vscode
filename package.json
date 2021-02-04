@@ -68,7 +68,7 @@
         },
         "rholang.rnodeDockerImage": {
           "type": "string",
-          "default": "rchain/rnode",
+          "default": "rchain/rnode:v0.9.24",
           "description": "Docker image (version) used by Rholang Language Server."
         },
         "rholang.showAllOutput": {
