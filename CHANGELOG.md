@@ -1,5 +1,8 @@
 # Change Log
 
+### 0.6.5 (May 30, 2021)
+- Update for RNode version >0.9.25 (config changes)
+
 ### 0.6.0 (October 06, 2019)
 - Switch to gRPC connection :rocket:
 - Update for RNode v0.9.{14,15} (new API)
