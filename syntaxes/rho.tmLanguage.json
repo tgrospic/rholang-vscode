@@ -26,6 +26,9 @@
           "include": "#new"
         },
         {
+          "include": "#let"
+        },
+        {
           "include": "#contract"
         },
         {
@@ -132,6 +135,44 @@
         }
       ]
     },
+    "let": {
+      "patterns": [
+        {
+          "begin": "\\blet\\b",
+          "beginCaptures": {
+            "0": {
+              "name": "constant.language.let.rho"
+            }
+          },
+          "end": "\\bin\\b",
+          "endCaptures": {
+            "0": {
+              "name": "constant.language.in.rho"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#string"
+            },
+            {
+              "include": "#constant"
+            },
+            {
+              "include": "#proc-quote"
+            },
+            {
+              "include": "#system-proc"
+            },
+            {
+              "include": "#parameter"
+            }
+          ]
+        }
+      ]
+    },
     "parameter": {
       "match": "([@*]?)([-_'[:alnum:]]+)",
       "captures": {
@@ -204,7 +245,7 @@
           ]
         },
         {
-          "begin": "(!|!!)?(\\()",
+          "begin": "(!|!!|!\\?|\\?!)?(\\()",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.send.rho"
@@ -301,7 +342,7 @@
           "name": "keyword.control.if.rho"
         },
         {
-          "match": "\\||/\\\\|\\\\/|~|/|%%|\\+|\\-|\\+\\+|<=|<|>=|>|==|!=|<-|=>|\\.\\.\\.",
+          "match": "\\||;|&|/\\\\|\\\\/|~|/|%%|\\+|\\-|\\+\\+|<=|<|>=|>|==|!=|<-|=>|\\.\\.\\.",
           "name": "keyword.control.op.rho"
         },
         {

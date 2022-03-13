@@ -18,6 +18,7 @@ repository:
       - include: '#string'
       - include: '#system-proc'
       - include: '#new'
+      - include: '#let'
       - include: '#contract'
       - include: '#for'
       - include: '#match-select'
@@ -64,6 +65,21 @@ repository:
           - include: '#system-proc'
           - include: '#parameter'
 
+  # from Rholang 1.1 (RNode v0.13.0)
+  let:
+    patterns:
+      - begin: '\blet\b'
+        beginCaptures: {'0': {name: constant.language.let.rho}}
+        end: '\bin\b'
+        endCaptures: {'0': {name: constant.language.in.rho}}
+        patterns:
+          - include: '#comment'
+          - include: '#string'
+          - include: '#constant'
+          - include: '#proc-quote'
+          - include: '#system-proc'
+          - include: '#parameter'
+
   parameter:
     match: '([@*]?)([-_''[:alnum:]]+)'
     captures:
@@ -103,7 +119,7 @@ repository:
         endCaptures: {'0': {name: punctuation.parenthesis.close.rho}}
         patterns:
           - include: '#proc'
-      - begin: '(!|!!)?(\()'
+      - begin: '(!|!!|!\?|\?!)?(\()'
         beginCaptures:
           '1': {name: keyword.control.send.rho}
           '2': {name: punctuation.parenthesis.open.rho}
@@ -141,7 +157,7 @@ repository:
           '2': {name: constant.language.rho}
       - match: '\b(if|else)\b'
         name: keyword.control.if.rho
-      - match: '\||/\\|\\/|~|/|%%|\+|\-|\+\+|<=|<|>=|>|==|!=|<-|=>|\.\.\.'
+      - match: '\||;|&|/\\|\\/|~|/|%%|\+|\-|\+\+|<=|<|>=|>|==|!=|<-|=>|\.\.\.'
         name: keyword.control.op.rho
       - match: '-?\b[0-9]+\b'
         name: constant.numeric.rho
