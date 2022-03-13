@@ -1,5 +1,8 @@
 # Change Log
 
+### 0.7.0 (March 13, 2022)
+- Update syntax highlighting for Rholang 1.1 (RNode v0.13.0)
+
 ### 0.6.5 (May 30, 2021)
 - Update for RNode version >0.9.25 (config changes)
 
