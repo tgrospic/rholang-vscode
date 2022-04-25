@@ -94,8 +94,8 @@ If you are new to Rholang I recommend to visit Joshy Orndorff's excellent introd
 [rchain-coop]: https://www.rchain.coop
 [rho-github]: https://github.com/rchain/rchain/tree/master/rholang
 [rho-bnf-origin]: https://github.com/rchain/rchain/blob/243a3fd7b1d7f1b9669920da80f419e84fbd02b6/rholang/src/main/bnfc/rholang_mercury.cf
-[arch-rholang]: http://rchain-architecture.readthedocs.io/en/latest/contracts/contract-design.html#rholang-a-concurrent-language
-[arch-namespace-logic]: http://rchain-architecture.readthedocs.io/en/latest/contracts/namespaces.html#namespace-logic
+[arch-rholang]: https://architecture-docs.readthedocs.io/contracts/contract-design.html#rholang-a-concurrent-language
+[arch-namespace-logic]: https://architecture-docs.readthedocs.io/contracts/namespaces.html#namespace-logic
 [tuplespaces-to-picalculus]: http://mobile-process-calculi-for-programming-the-new-blockchain.readthedocs.io/en/latest/actors-tuples-and-pi.html#from-tuplespaces-to-calculus
 
 [beta-badge]: https://cdn.jsdelivr.net/gh/tgrospic/rholang-vscode@v0.6.1/assets/beta.svg
