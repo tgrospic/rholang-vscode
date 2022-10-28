@@ -68,6 +68,11 @@
           "default": "rchain/rnode:latest",
           "description": "Docker image (version) used by Rholang Language Server."
         },
+        "rholang.dockerRunOptions": {
+          "type": "string",
+          "default": "",
+          "description": "Docker run options."
+        },
         "rholang.showAllOutput": {
           "type": "boolean",
           "default": false,
